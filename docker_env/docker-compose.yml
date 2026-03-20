@@ -1,0 +1,20 @@
+# docker_env/docker-compose.yaml
+
+services:
+  traffic-ai:
+    build:
+      context: ..
+      dockerfile: docker_env/Dockerfile
+    image: traffic-ai:py311-cu118
+    container_name: traffic-ai
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    volumes:
+      - ../:/workspace
+    environment:
+      PYTHONUNBUFFERED: "1"
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    gpus: all
+    command: bash

@@ -1,0 +1,67 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+env/
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Logs e temporários
+# =========================
+*.log
+*.tmp
+*.temp
+
+# =========================
+# Sistema operacional
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Arquivos privados / sensíveis
+# =========================
+pesos/
+*.pt
+*.pth
+*.onnx
+*.engine
+
+# =========================
+# Vídeos reais (Bloqueia a pasta toda)
+# =========================
+videos_entrada/
+videos_saida/
+
+# =========================
+# Resultados e artefatos de execução
+# =========================
+resultados/
+runs/
+output/
+outputs/
+
+# =========================
+# Jupyter / notebook
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Arquivos de ambiente
+# =========================
+.env
+.env.*
