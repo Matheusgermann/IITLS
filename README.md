@@ -1,8 +1,8 @@
 # 🚦 IITLS - Intelligent Integrated Traffic Light System
 
-O **IITLS** (Sistema Inteligente e Integrado de Semáforos) é uma solução de *Edge AI* desenvolvida para modernizar a mobilidade urbana. 
+O **IITLS** (Sistema Inteligente de Semáforos Integrados) é uma solução de *Edge AI* desenvolvida para modernizar a mobilidade urbana. 
 
-Em vez de operar com tempos fixos que geram congestionamentos, o sistema utiliza Visão Computacional na borda para detectar, classificar e contar veículos em tempo real. O objetivo final do IITLS é converter o fluxo de vídeo das ruas em dados estruturados leves, permitindo a sincronização dinâmica de redes de semáforos (ondas verdes) para reduzir o tempo de viagem e a emissão de carbono nas cidades.
+Em vez de operar com tempos fixos que geram congestionamentos, o sistema utiliza Visão Computacional para detectar, classificar e contar veículos em tempo real. O objetivo final do IITLS é converter o fluxo de vídeo das ruas em dados estruturados leves, permitindo a sincronização dinâmica de redes de semáforos (ondas verdes) para reduzir o tempo de viagem e a emissão de carbono nas cidades.
 
 > 🏆 **Reconhecimento:** Este projeto foi selecionado como **Finalista do Red Bull Basement 2026**, figurando entre os **5 melhores projetos inovadores do Brasil**.
 
@@ -14,7 +14,7 @@ A maioria das cidades ainda opera com semáforos de tempos fixos, gerando conges
 
 Através de **Visão Computacional** avançada rodando diretamente no local (*Edge Computing*), o sistema analisa o fluxo de veículos em tempo real e gera dados estruturados. Esses dados permitem a sincronização inteligente de semáforos, criando "ondas verdes" que se adaptam à realidade da rua instantaneamente.
 
-> 🔒 **Nota de Propriedade Intelectual:** Este repositório atua exclusivamente como um portfólio e demonstração (Showcase) da tecnologia. O código-fonte proprietário, os pesos das redes neurais, a arquitetura de telemetria e os algoritmos de integração em nuvem são mantidos em repositórios privados.
+> 🔒 **Nota de Propriedade:** Este repositório atua exclusivamente como um portfólio e demonstração (Showcase) da tecnologia. O código-fonte proprietário, os pesos das redes neurais, a arquitetura de telemetria e os algoritmos de integração em nuvem são mantidos em repositórios privados.
 
 ---
 
@@ -28,7 +28,7 @@ Abaixo está uma demonstração do nosso algoritmo proprietário processando um 
 
 ## 🚀 Diferenciais da Arquitetura IITLS
 
-O sistema foi desenhado para ser viável, escalável e de baixo custo para governos e concessionárias:
+O sistema foi desenhado para ser viável, escalável e de baixo custo para governos e empresas:
 
 - **Processamento na Borda (Edge AI):** A análise de vídeo ocorre dentro do próprio poste. Não enviamos vídeos pesados para a nuvem, o que zera a necessidade de planos de dados móveis caros e garante respostas em milissegundos.
 - **Rede Privada P2MP:** Utilização de arquitetura de telemetria via rádio de alta velocidade, criando uma rede fechada, segura e sem custos mensais de operadora.
@@ -37,12 +37,12 @@ O sistema foi desenhado para ser viável, escalável e de baixo custo para gover
 
 ---
 
-## 📊 Impacto Esperado (Smart Cities)
+## 📊 Impacto Esperado
 
 A implementação da arquitetura IITLS gera resultados diretos na mobilidade urbana:
 1. **Redução do tempo de viagem** e de veículos parados sem necessidade.
 2. **Queda drástica na emissão de CO2**, diminuindo o tempo de veículos acelerando e freando por conta dos semáforos mal otimizados.
-3. **Geração de dados valiosos** (Dashboard em tempo real) para o planejamento de malhas viárias pelas prefeituras e concessionárias.
+3. **Geração de dados valiosos** (Dashboard em tempo real) para o planejamento urbano conseguir entender visualmente onde estão os focos de congestionamentos e como o trânsito está fluindo.
 
 ---
 
