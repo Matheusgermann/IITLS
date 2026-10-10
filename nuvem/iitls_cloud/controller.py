@@ -59,6 +59,7 @@ class Coordinator:
         self._plan_seq = 0
         self.last_replan = -math.inf
         self.last_eval = 0.0
+        self.health: dict[int, Heartbeat] = {}
 
     # ------------------------------------------------------------------ entrada
 
@@ -68,6 +69,7 @@ class Coordinator:
             self.est.ingest(msg)
             return []
         if isinstance(msg, Heartbeat):
+            self.health[msg.node] = msg
             return []
         if isinstance(msg, Event):
             now = msg.t if now is None else now
@@ -328,6 +330,21 @@ class Coordinator:
             return self.replan(now)
         return None
 
+    HEARTBEAT_TIMEOUT_S = 5.0
+
+    def link_status(self, nid: int, now: float) -> dict:
+        """Saúde do enlace e se a borda está executando o plano que a nuvem mandou."""
+        hb = self.health.get(nid)
+        if hb is None:
+            return {"online": False, "plano_em_execucao": None, "no_plano_certo": False}
+        plan = self.plans.get(nid)
+        return {
+            "online": now - hb.t <= self.HEARTBEAT_TIMEOUT_S,
+            "fase": hb.phase, "tempo_na_fase": hb.phase_elapsed, "temp_c": hb.temp_c,
+            "plano_em_execucao": hb.plan_id,
+            "no_plano_certo": plan is not None and hb.plan_id == plan.plan_id,
+        }
+
     def snapshot(self, now: float) -> dict:
         return {
             "t": now,
@@ -345,6 +362,7 @@ class Coordinator:
                     "required_cycle": round(d.required_cycle, 1),
                     "notes": d.notes,
                     "plan": self.plans[nid].to_dict() if nid in self.plans else None,
+                    "enlace": self.link_status(nid, now),
                 }
                 for nid, d in self.decisions.items()
             },

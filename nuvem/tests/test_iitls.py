@@ -7,7 +7,7 @@ from iitls_cloud.controller import Coordinator
 from iitls_cloud.coordination import optimize_offsets
 from iitls_cloud.edge_runtime import LocalController
 from iitls_cloud.protocol import (
-    Event, EventType, HealthFlag, LaneStats, PhaseTiming, Plan, PlanMode, Preempt, ProtocolError, Telemetry, decode,
+    Heartbeat, Event, EventType, HealthFlag, LaneStats, PhaseTiming, Plan, PlanMode, Preempt, ProtocolError, Telemetry, decode,
 )
 from iitls_cloud.timing import signal_delay, split_greens
 from iitls_cloud.topology import Network
@@ -273,3 +273,67 @@ def test_udp_returns_plan():
 
     plan = asyncio.run(go())
     assert plan.node == 2 and plan.phases
+
+
+class FakeMqtt:
+    def __init__(self):
+        self.pub, self.subs = [], []
+
+    def publish(self, topic, payload, qos=0, retain=False):
+        self.pub.append((topic, payload, qos, retain))
+
+    def subscribe(self, topic, qos=0):
+        self.subs.append(topic)
+
+
+def test_heartbeat_carries_controller_state():
+    hb = decode(Heartbeat(3, 0, 9, 100, HealthFlag.CAMERA_OK, 55, 1, 12.5, 77).to_bytes())
+    assert (hb.phase, hb.phase_elapsed, hb.plan_id, hb.temp_c) == (1, 12.5, 77, 55)
+    assert decode(Heartbeat(3, 0, 9, 100, 1, 55, 1, 12.5, 77).to_json()).plan_id == 77
+
+
+def test_mqtt_bridge_retained_plans_and_link_health():
+    from iitls_cloud.api import Service
+    from iitls_cloud.mqtt_bridge import CloudBridge, EdgeLink
+
+    clock = [100.0]
+    svc = Service(corridor(), clock=lambda: clock[0])
+    cloud_mq = FakeMqtt()
+    bridge = CloudBridge(svc, cloud_mq)
+    bridge.start()
+    assert cloud_mq.subs == ["iitls/+/up"]
+    retained = [p for p in cloud_mq.pub if p[0].endswith("/plan")]
+    assert len(retained) == 4 and all(p[3] and p[2] == 1 for p in retained)
+
+    # borda recebe o plano retido e reporta no heartbeat que está executando ele
+    edge_mq = FakeMqtt()
+    lc = LocalController(corridor().nodes[1])
+    edge = EdgeLink(1, lc, edge_mq)
+    edge.start()
+    topic, payload, *_ = next(p for p in retained if p[0] == "iitls/1/plan")
+    edge.on_message(topic, payload)
+    lc.step(100)
+    phase, elapsed, plan_id = lc.status(100)
+    edge.send(Heartbeat(1, 0, 1, 100, HealthFlag.CAMERA_OK, 50, phase, elapsed, plan_id))
+    t, body, qos, retain = edge_mq.pub[-1]
+    assert t == "iitls/1/up" and qos == 0 and not retain
+    n_before = len(cloud_mq.pub)
+    bridge.on_message(t, body)
+    assert len(cloud_mq.pub) == n_before  # plano não mudou: nada republicado
+    st = svc.coord.link_status(1, 102)
+    assert st["online"] and st["no_plano_certo"]
+    assert not svc.coord.link_status(1, 106)["online"]  # 5 s sem heartbeat
+
+    # nó falsificado: tópico do 2 com mensagem do 1 é descartado
+    bridge.on_message("iitls/2/up", body)
+    assert 2 not in svc.coord.health
+
+    # emergência vira PREEMPT nos tópicos cmd, não retidos
+    edge.send(Event(1, 0, 2, 100, EventType.EMERGENCY_VEHICLE, 0, 50))
+    t, body, qos, _ = edge_mq.pub[-1]
+    assert qos == 1
+    bridge.on_message(t, body)
+    cmds = [p for p in cloud_mq.pub if p[0].endswith("/cmd")]
+    assert cmds and not any(p[3] for p in cmds)
+    edge.on_message("iitls/1/cmd", next(p[1] for p in cmds if p[0] == "iitls/1/cmd"))
+    assert lc.preempt is not None

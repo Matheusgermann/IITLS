@@ -3,6 +3,8 @@
 - UDP :9700  -> telemetria/eventos binários das Jetsons (caminho principal, menor overhead).
                A resposta a cada mensagem é o plano vigente do nó (binário), então a
                borda recebe o plano sem precisar de conexão aberta nem polling extra.
+- MQTT       -> transporte de produção (sem TLS, dentro do WireGuard), ver mqtt_bridge.py.
+               Liga com IITLS_MQTT_HOST (e IITLS_MQTT_PORT, padrão 1883).
 - HTTP :8000 -> mesma ingestão em JSON/binário, consulta de planos e estado (dashboard).
 
 Rodar:  uvicorn iitls_cloud.api:app --host 0.0.0.0 --port 8000
@@ -14,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import threading
 import time
 from contextlib import asynccontextmanager
 
@@ -32,8 +35,13 @@ class Service:
         self.coord = Coordinator(net, t_ref=0)
         self.coord.replan(self.clock())
         self.outbox: list = []  # preempções a entregar
+        self.lock = threading.Lock()  # MQTT (thread do paho), UDP e HTTP chamam ao mesmo tempo
 
     def handle(self, msg) -> tuple[Plan | None, list]:
+        with self.lock:
+            return self._handle(msg)
+
+    def _handle(self, msg) -> tuple[Plan | None, list]:
         now = self.clock()
         cmds = self.coord.ingest(msg, now)
         if isinstance(msg, Event) and cmds:
@@ -73,14 +81,27 @@ def create_app(net: Network | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        transport = None
+        transport = mqtt = None
         port = int(os.environ.get("IITLS_UDP_PORT", "9700"))
         if port:
             loop = asyncio.get_running_loop()
             transport, _ = await loop.create_datagram_endpoint(lambda: UdpProtocol(svc), local_addr=("0.0.0.0", port))
+        host = os.environ.get("IITLS_MQTT_HOST")
+        if host:
+            import paho.mqtt.client as paho
+
+            from .mqtt_bridge import CloudBridge
+
+            mqtt = paho.Client(paho.CallbackAPIVersion.VERSION2, client_id="iitls-nuvem")
+            CloudBridge(svc, mqtt).attach_paho(mqtt)
+            mqtt.connect_async(host, int(os.environ.get("IITLS_MQTT_PORT", "1883")))
+            mqtt.loop_start()
         yield
         if transport:
             transport.close()
+        if mqtt:
+            mqtt.loop_stop()
+            mqtt.disconnect()
 
     app = FastAPI(title="IITLS nuvem", version="0.1.0", lifespan=lifespan)
     app.state.svc = svc

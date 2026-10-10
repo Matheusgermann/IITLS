@@ -72,6 +72,17 @@ class LocalController:
         phases = [PhaseTiming(p.id, greens[p.id], p.yellow, p.all_red) for p in self.node.ordered_phases()]
         return Plan(self.node.id, 0, 0, sum(x.total for x in phases), 0.0, 2**31, PlanMode.FAILSAFE, phases)
 
+    def status(self, now: float) -> tuple[int, float, int]:
+        """(fase verde atual, s na fase, plan_id em execução) para o heartbeat de 1 s."""
+        from .protocol import PHASE_UNKNOWN
+
+        cur = self.current
+        if cur is None or cur.kind == "F":
+            phase, elapsed = PHASE_UNKNOWN, 0.0
+        else:
+            phase, elapsed = cur.phase, max(0.0, now - cur.start)
+        return phase, elapsed, self.active_plan(now).plan_id
+
     # ------------------------------------------------------------- comandos
 
     def receive_plan(self, plan: Plan) -> None:

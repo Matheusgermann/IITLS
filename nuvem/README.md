@@ -5,7 +5,7 @@ Recebe dados agregados por faixa das câmeras (Jetson na borda) e devolve a cada
 não só em um cruzamento.
 
 ```
-câmera + Jetson ──UDP 60 B/5 s──▶ nuvem: estimador ▶ modos ▶ ciclo/verdes ▶ defasagens ──plano──▶ executor local ▶ controlador
+câmeras + Jetson ──MQTT/WireGuard 82 B/5 s──▶ nuvem: estimador ▶ modos ▶ ciclo/verdes ▶ defasagens ──plano──▶ executor local ▶ controlador
       │  (YOLO + contagem por faixa)                                                          ▲  (coordenado-atuado)
       └── emergência / ônibus: reação local imediata ─────────────────────────────────────────┘
 ```
@@ -76,8 +76,10 @@ python -m simulacao.cenario --saida simulacao/out   # só gera rede + topologia.
 IITLS_TOPOLOGY=simulacao/out/topologia.json uvicorn iitls_cloud.api:app --port 8000
 ```
 
-Endpoints: `POST /v1/ingest` (binário ou JSON), `GET /v1/plans/{nó}`, `GET /v1/state` (dashboard), `POST /v1/replan`.
-UDP na porta 9700 (`IITLS_UDP_PORT`, 0 desliga).
+Transporte de produção: MQTT (`IITLS_MQTT_HOST`, `IITLS_MQTT_PORT`), com tópicos `iitls/N/up`, `iitls/N/plan` (retido) e
+`iitls/N/cmd`; ver `mqtt_bridge.py` (lado nuvem `CloudBridge`, lado borda `EdgeLink`). Alternativa: UDP 9700
+(`IITLS_UDP_PORT`, 0 desliga). HTTP: `POST /v1/ingest` (binário ou JSON), `GET /v1/plans/{nó}`,
+`GET /v1/state` (dashboard, inclui enlace online e se a borda está no plano certo), `POST /v1/replan`.
 
 ## Topologia
 

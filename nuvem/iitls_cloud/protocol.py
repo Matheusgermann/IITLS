@@ -226,20 +226,36 @@ class Event:
         return cls(node=d["n"], cam=d.get("c", 0), seq=d.get("s", 0), t=d["t"], kind=EventType(d["e"]), lane=d.get("ln", 0), value=d.get("x", 0))
 
 
-_HB = struct.Struct("<BBHBHIBB")  # 12 bytes
+_HB = struct.Struct("<BBHBHIBBBHH")  # 18 bytes (+2 CRC)
+
+PHASE_UNKNOWN = 0xFF  # piscante, preempção sem fase definida ou controlador sem resposta
 
 
 @dataclass
 class Heartbeat:
+    """Enviado a cada 1 s. Sem heartbeat por 5 s, a nuvem marca o cruzamento como fora do ar
+    (a borda segue o último plano até `valid_until`)."""
+
     node: int
     cam: int
     seq: int
     t: int
     flags: int
     temp_c: int = 0  # temperatura da Jetson, sinal de saúde do hardware
+    phase: int = PHASE_UNKNOWN  # fase verde atual no controlador
+    phase_elapsed: float = 0.0  # s na fase atual
+    plan_id: int = 0  # plano em execução (0 = plano de segurança local)
 
     def to_bytes(self) -> bytes:
-        return _seal(_HB.pack(PROTOCOL_VERSION, MsgType.HEARTBEAT, self.node, self.cam, self.seq & 0xFFFF, self.t, self.flags, _u8(self.temp_c)))
+        return _seal(_HB.pack(
+            PROTOCOL_VERSION, MsgType.HEARTBEAT, self.node, self.cam, self.seq & 0xFFFF, self.t, self.flags,
+            _u8(self.temp_c), self.phase & 0xFF, _u16(self.phase_elapsed * 10), self.plan_id & 0xFFFF,
+        ))
+
+    def to_json(self) -> str:
+        return json.dumps({"v": 1, "m": int(MsgType.HEARTBEAT), "n": self.node, "c": self.cam, "s": self.seq, "t": self.t,
+                           "f": int(self.flags), "tc": self.temp_c, "ph": self.phase, "pe": round(self.phase_elapsed, 1),
+                           "id": self.plan_id}, separators=(",", ":"))
 
 
 # ---------------------------------------------------------------------------
@@ -353,8 +369,8 @@ def decode(data: bytes | str | dict):
             _, _, node, cam, seq, t, ev, lane, value = _EVT.unpack(body)
             return Event(node, cam, seq, t, EventType(ev), lane, value)
         if kind == MsgType.HEARTBEAT:
-            _, _, node, cam, seq, t, flags, temp = _HB.unpack(body)
-            return Heartbeat(node, cam, seq, t, flags, temp)
+            _, _, node, cam, seq, t, flags, temp, phase, elapsed, plan_id = _HB.unpack(body)
+            return Heartbeat(node, cam, seq, t, flags, temp, phase, elapsed / 10, plan_id)
         if kind == MsgType.PLAN:
             return Plan.from_bytes_body(body)
         if kind == MsgType.PREEMPT:
@@ -368,7 +384,8 @@ def decode(data: bytes | str | dict):
     if kind == MsgType.EVENT:
         return Event.from_dict(d)
     if kind == MsgType.HEARTBEAT:
-        return Heartbeat(d["n"], d.get("c", 0), d.get("s", 0), d["t"], d.get("f", 1), d.get("tc", 0))
+        return Heartbeat(d["n"], d.get("c", 0), d.get("s", 0), d["t"], d.get("f", 1), d.get("tc", 0),
+                         d.get("ph", PHASE_UNKNOWN), d.get("pe", 0.0), d.get("id", 0))
     if kind == MsgType.PLAN:
         return Plan.from_dict(d)
     raise ProtocolError(f"tipo {kind} desconhecido")

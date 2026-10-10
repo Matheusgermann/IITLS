@@ -6,10 +6,21 @@ Implementação de referência: `nuvem/iitls_cloud/protocol.py` (encode/decode +
 ## Princípios
 
 - A borda manda **só agregados por faixa**, nunca vídeo nem caixas delimitadoras.
-- Formato primário **binário little-endian**, com **CRC-16/CCITT** no fim (enlace de rádio pode corromper bytes).
+- Formato primário **binário little-endian**, com **CRC-16/CCITT** no fim (defesa extra, e obrigatório no caminho UDP).
   O mesmo conteúdo existe em **JSON compacto** (chaves curtas) para debug e HTTP.
-- Transporte primário: **UDP** (porta 9700) dentro de um túnel **WireGuard** (criptografia + autenticação do nó).
-  Cada mensagem da borda é respondida com o plano vigente do nó, então não precisa de conexão aberta nem polling.
+- Uma borda (Jetson Orin Nano) **por cruzamento**, com 2–4 câmeras: uma única mensagem por cruzamento, com todas as faixas.
+- Transporte: **MQTT sem TLS dentro do túnel WireGuard** (o túnel já cifra e autentica; TLS só gastaria bytes e
+  handshake no 4G). Payload sempre o binário abaixo. A identidade do cruzamento é a chave WireGuard, e o broker
+  aplica ACL por tópico. Alternativa sem broker: UDP 9700, em que a nuvem responde cada telemetria com o plano.
+
+| tópico | sentido | conteúdo | QoS | retido |
+|---|---|---|---|---|
+| `iitls/N/up` | borda → nuvem | TELEMETRY (5 s), HEARTBEAT (1 s) | 0 | não |
+| `iitls/N/up` | borda → nuvem | EVENT | 1 | não |
+| `iitls/N/plan` | nuvem → borda | PLAN | 1 | **sim**: ao reconectar, a borda recebe o último plano |
+| `iitls/N/cmd` | nuvem → borda | PREEMPT | 1 | não |
+
+A nuvem descarta mensagens cujo `node` não bate com o `N` do tópico.
 - **Nada de segurança depende da nuvem.** O executor local (`edge_runtime.py`) garante mínimos, entreverdes,
   preempção local e plano fixo de segurança quando o plano vence (`valid_until`).
 - Relógios sincronizados (GPS/PPS ou NTP via chrony). A onda verde depende disso: o plano é ancorado em tempo absoluto.
@@ -45,8 +56,9 @@ Por faixa, 11 bytes:
 
 CRC-16 (2 bytes) no fim. **Tamanho: 16 + 11 × faixas.** Câmera com 4 faixas = 60 bytes.
 
-Com UDP/IP (28 B) e WireGuard (32 B): ~120 B a cada 5 s = **~0,2 kbit/s por câmera**, ~62 MB/mês.
-O plano de volta tem tamanho parecido.
+Por cruzamento, com cabeçalhos MQTT/TCP/IP e WireGuard (~90 B por mensagem): telemetria de 6 faixas
+(82 B) a cada 5 s mais heartbeat (20 B) a cada 1 s dá **~1,2 kbit/s**, ~370 MB/mês. O heartbeat domina; o plano de
+volta só é publicado quando muda.
 
 Posição da linha virtual de contagem: **≥ 50 m antes da retenção**, para contar chegadas (e não só a
 descarga da fila). A zona de fila/ocupação cobre o que a câmera enxerga a partir da retenção (`view_m`, padrão 80 m).
@@ -70,9 +82,13 @@ JSON equivalente:
 | 5 falha de câmera | código |
 | 6 câmera restaurada | — |
 
-### HEARTBEAT (0x03), 15 bytes
+### HEARTBEAT (0x03), 20 bytes, a cada 1 s
 
-`version, type, node, cam, seq, t, flags, temp_c` — saúde da Jetson quando não há telemetria.
+`version u8, type u8, node u16, cam u8, seq u16, t u32, flags u8, temp_c u8, phase u8, phase_elapsed u16 (décimos de s), plan_id u16, crc u16`
+
+`phase` é a fase verde atual no controlador (255 = piscante/desconhecida) e `plan_id` é o plano em execução
+(0 = plano de segurança local). Com isso a nuvem sabe se a borda está no plano certo. Sem heartbeat por **5 s**,
+a nuvem marca o cruzamento como fora do ar, e a borda segue o último plano até `valid_until`.
 
 ## Nuvem → borda
 
@@ -108,5 +124,6 @@ cruzamentos seguintes (corredor verde), com `t_start` escalonado pelo tempo de v
 | agregação na borda | 5 s (configurável) |
 | replanejamento na nuvem | a cada 60 s, ~10–80 ms de CPU para 5 cruzamentos |
 | aplicação do plano | no próximo limite de ciclo, com transição suave |
-| emergência | imediata na borda; corredor a jusante em 1 RTT (rádio/Starlink: 20–60 ms) |
-| perda de enlace | plano atual segue até `valid_until` (5 ciclos), depois plano fixo local |
+| emergência | imediata na borda; corredor a jusante em 1 RTT (4G: 40–120 ms) |
+| heartbeat | 1 s; 5 s sem heartbeat = cruzamento fora do ar |
+| perda de enlace | plano atual segue até `valid_until` (5 ciclos), depois plano fixo local; ao reconectar recebe o plano retido |
