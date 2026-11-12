@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="t d">
+  <title id="t">Arquitetura do IITLS</title>
+  <desc id="d">Câmera no cruzamento, processamento na borda com detecção, rastreamento e contagem por faixa, envio de dados leves para a nuvem, coordenação dos semáforos em onda verde.</desc>
+  <style>
+    .fundo { fill: #f7f6f2; }
+    .caixa { fill: #ffffff; stroke: #1f2a30; stroke-width: 1.5; }
+    .destaque { fill: #ffffff; stroke: #2e7d4f; stroke-width: 2; }
+    .titulo { font: 600 15px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #1f2a30; }
+    .texto { font: 400 12.5px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #4a555c; }
+    .rotulo { font: 500 11.5px ui-monospace, "SFMono-Regular", Consolas, monospace; fill: #2e7d4f; }
+    .seta { stroke: #1f2a30; stroke-width: 1.5; fill: none; marker-end: url(#ponta); }
+    .tracejado { stroke: #8a949a; stroke-width: 1.2; stroke-dasharray: 4 4; fill: none; marker-end: url(#ponta-cinza); }
+  </style>
+  <defs>
+    <marker id="ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f2a30"/></marker>
+    <marker id="ponta-cinza" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a949a"/></marker>
+  </defs>
+  <rect class="fundo" x="0" y="0" width="960" height="300" rx="10"/>
+
+  <!-- Cruzamento -->
+  <rect class="caixa" x="24" y="70" width="170" height="130" rx="6"/>
+  <text class="titulo" x="40" y="98">Cruzamento</text>
+  <text class="texto" x="40" y="122">Câmera no poste</text>
+  <text class="texto" x="40" y="142">olhando cada faixa</text>
+  <text class="texto" x="40" y="162">até a retenção</text>
+  <!-- semáforo -->
+  <rect x="160" y="150" width="18" height="40" rx="3" fill="#1f2a30"/>
+  <circle cx="169" cy="159" r="4.5" fill="#c0392b"/>
+  <circle cx="169" cy="170" r="4.5" fill="#d9a21b"/>
+  <circle cx="169" cy="181" r="4.5" fill="#2e7d4f"/>
+
+  <path class="seta" d="M194,135 L250,135"/>
+  <text class="rotulo" x="200" y="126">vídeo</text>
+
+  <!-- Borda -->
+  <rect class="destaque" x="252" y="50" width="250" height="170" rx="6"/>
+  <text class="titulo" x="268" y="78">Borda (no poste)</text>
+  <text class="texto" x="268" y="104">Detecção de objetos: YOLO11m</text>
+  <text class="texto" x="268" y="124">Rastreamento: ByteTrack</text>
+  <text class="texto" x="268" y="144">Contagem por faixa e classe</text>
+  <text class="texto" x="268" y="164">Vídeo não sai do equipamento</text>
+  <text class="texto" x="268" y="196">pessoa, bicicleta, moto, carro,</text>
+  <text class="texto" x="268" y="212">ônibus e caminhão</text>
+
+  <path class="seta" d="M502,135 L572,135"/>
+  <text class="rotulo" x="508" y="126">só números</text>
+
+  <!-- Nuvem -->
+  <rect class="caixa" x="574" y="50" width="200" height="170" rx="6"/>
+  <text class="titulo" x="590" y="78">Nuvem</text>
+  <text class="texto" x="590" y="104">Junta os dados de todos</text>
+  <text class="texto" x="590" y="124">os cruzamentos</text>
+  <text class="texto" x="590" y="152">Calcula tempos e a</text>
+  <text class="texto" x="590" y="172">sequência de abertura</text>
+  <text class="texto" x="590" y="192">(onda verde)</text>
+
+  <path class="seta" d="M774,135 L828,135"/>
+  <text class="rotulo" x="780" y="126">plano</text>
+
+  <!-- Rede -->
+  <rect class="caixa" x="830" y="70" width="106" height="130" rx="6"/>
+  <text class="titulo" x="846" y="98">Rede</text>
+  <text class="texto" x="846" y="122">Semáforos</text>
+  <text class="texto" x="846" y="142">abrindo em</text>
+  <text class="texto" x="846" y="162">sequência</text>
+
+  <!-- volta -->
+  <path class="tracejado" d="M883,200 L883,262 L109,262 L109,204"/>
+  <text class="texto" x="330" y="284">Sem conexão, cada cruzamento segue sozinho com um plano fixo e seguro</text>
+</svg>
