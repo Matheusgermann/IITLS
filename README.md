@@ -52,7 +52,7 @@ O código do sistema completo é privado.
 
 Prefeituras e concessionárias interessadas em uma prova de conceito: iitls.startup@gmail.com
 
-Site: [iitls.vercel.app](https://iitls.vercel.app)
+Site: [iitls.pages.dev](https://iitls.pages.dev)
 
 Fundadores: Matheus Germann, João Vitor Soska e Pedro Otávio Nunes
 
